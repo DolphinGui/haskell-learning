@@ -20,7 +20,7 @@ common warnings
 executable parser
     import:           warnings
     main-is:          Main.hs
-    build-depends:    base ^>=4.17.2.1, split
+    build-depends:    base ^>=4.17.2.1
     hs-source-dirs:   app
     default-language: Haskell2010
     other-modules: Tokenizer

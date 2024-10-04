@@ -2,6 +2,7 @@ module Main where
 
 import Data.Char
 import  Tokenizer
+import Debug.Trace (trace)
 
 data Operator = Add
     | Sub
@@ -47,19 +48,19 @@ parseNum tok
     (_, Nothing) -> Nothing
     (Just x, Just y) -> Just (x : y)
 
-try ::  [t -> Maybe a] -> t -> Maybe a
-try [f] x = f x
-try fs x = case head fs x of
-    Just r -> Just r
-    Nothing -> try (tail fs) x
-
+(?||) :: (a -> Maybe b) -> (a -> Maybe b) -> (a -> Maybe b)
+(?||) b c a =  case b a of
+    Just x -> Just x
+    Nothing -> c a
 
 parseExpr :: String -> Maybe Expression
-parseExpr = try [ parseNum >>? Number, parseOp >>? Operator]
+parseExpr  = (parseNum >>? Number) ?|| (parseOp >>? Operator) ?|| (Just . Variable)
 
 parse :: [String] -> Maybe [Expression]
 parse [] = Just []
-parse [tok] =  mapM (try [ parseNum >>? Number, parseOp >>? Operator]) [tok]
+parse [tok] =  case parseExpr tok of
+    Just expr -> Just [expr]
+    Nothing -> Nothing
 parse toks = if head toks /= "("
     then parseExpr (head toks) ?:  parse (tail toks)
     else parse' (delimitLastWhen (==")") $ tail toks)
@@ -78,7 +79,7 @@ printmany = mapM putStrLn
 main :: IO ()
 main = do
     putStrLn "Hello, Haskell!"
-    print (parse $ tokenize "2 + ( 3 - 5 ) * 2")
+    print (parse $ tokenize "2 + (3 - 5) * 2")
     return ()
 
 

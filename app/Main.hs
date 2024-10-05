@@ -41,6 +41,7 @@ parseNum tok
   = case b a of
       Just r -> Just $ c r
       Nothing -> Nothing
+      
 
 (?:) :: Maybe a -> Maybe [a] -> Maybe [a]
 (?:) a b = case (a, b) of
@@ -48,13 +49,13 @@ parseNum tok
     (_, Nothing) -> Nothing
     (Just x, Just y) -> Just (x : y)
 
-(?||) :: (a -> Maybe b) -> (a -> Maybe b) -> (a -> Maybe b)
-(?||) b c a =  case b a of
+(||?) :: (a -> Maybe b) -> (a -> Maybe b) -> (a -> Maybe b)
+(||?) b c a =  case b a of
     Just x -> Just x
     Nothing -> c a
 
 parseExpr :: String -> Maybe Expression
-parseExpr  = (parseNum >>? Number) ?|| (parseOp >>? Operator) ?|| (Just . Variable)
+parseExpr  = (parseNum >>? Number) ||? (parseOp >>? Operator) ||? (Just . Variable)
 
 parse :: [String] -> Maybe [Expression]
 parse [] = Just []
@@ -73,13 +74,28 @@ parse toks = if head toks /= "("
 validateExpr :: [Expression] -> Bool
 validateExpr = elem (Subexpression [])
 
+isValue ::  Expression -> Bool
+isValue e = case e of
+    Operator _ -> False
+    _ -> True
+
+addImplicitMult :: [Expression] -> [Expression]
+addImplicitMult [] = []
+addImplicitMult [a] = [a]
+addImplicitMult (lhs :(rhs : es)) = if isValue lhs && isValue rhs
+    then [lhs, Operator Mult, rhs]
+    else [lhs, rhs]
+    ++ addImplicitMult es
+
 printmany :: [String] -> IO [()]
 printmany = mapM putStrLn
 
 main :: IO ()
 main = do
     putStrLn "Hello, Haskell!"
-    print (parse $ tokenize "2 + (3 - 5) * 2")
+    print (case parse $ tokenize "2 + (3 - 5) * 2" of
+        Just x -> Just (addImplicitMult x)
+        Nothing -> Nothing)
     return ()
 
 

@@ -27,7 +27,7 @@ classify :: Char -> CharClass
 classify c | isSpace c = Whitespace
     | isNumber c = Numeric
     | c == '(' || c == ')'  = Paren
-    | c `elem` "-+/%=*" = Operator
+    | c `elem` "-+/=*^" = Operator
     | otherwise = Other
 
 
@@ -40,9 +40,13 @@ findSplit str = findSplit' str 0
             then 0
             else 1 + findSplit' (tail s) i
 
+
+
 splitAlphaNumeric :: String -> [String]
 splitAlphaNumeric "" = []
-splitAlphaNumeric str = let (x, y) = splitAt (1 + findSplit str) str in x : splitAlphaNumeric y
+splitAlphaNumeric str = 
+    let (x, y) = splitAt (1 + findSplit str) str 
+    in x : splitAlphaNumeric y
 
 tokenize :: String -> [String]
 tokenize str = filter (not . any isSpace) $ splitAlphaNumeric str

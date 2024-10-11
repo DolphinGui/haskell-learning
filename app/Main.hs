@@ -127,24 +127,21 @@ assign v d ct =(v, d) : case lookup v ct of
     Just old -> filter (== (v, old)) ct
 
 getOp :: Operator -> Context -> Expression -> Expression -> Maybe (Expression, Context)
-getOp op ct = \lhs rhs -> case op of
+getOp op ct lhs rhs = case op of
     Assign -> case lhs of
         Variable v -> do
             (r, ct1) <- eval (rhs, ct)
             Just (Number r, assign v r ct1)
         _ -> Nothing
-    _ -> do
+    other -> do
         (l, ct1) <- eval (lhs, ct)
         (r, ct2) <- eval (rhs, ct1)
-        Just (Number $ getOp' op l r, ct2)
-    where
-        getOp' :: Operator -> Double -> Double -> Double
-        getOp' Add = (+)
-        getOp' Sub = (-)
-        getOp' Mult = (*)
-        getOp' Div = (/)
-        getOp' Exp = (**)
-        getOp' Assign = error "Assign should never be called on this"
+        Just (Number $ (case other of
+            Add -> (+)
+            Sub -> (-)
+            Mult -> (*)
+            Div -> (/)
+            Exp -> (**)) l r, ct2)
 
 window :: ((a, a, a) -> Maybe [a]) -> [a] -> Maybe [a]
 window f arr
@@ -177,17 +174,10 @@ reduce iii = case reduce' Exp iii >>= reduce' Mult >>= reduce' Div >>= reduce' A
         _ -> Nothing
     Nothing -> Nothing
 
-printmany :: [String] -> IO [()]
-printmany = mapM putStrLn
-
--- toSuffixNotation :: Infix -> Suffix
--- toSuffixNotation i = Suffix []
-
-
 main :: IO ()
 main = do
     putStrLn "Hello, Haskell!"
-    let a = parse $ tokenize "x = (y = 3) / y"
+    let a = parse $ tokenize "x =  (y = 3) * 43 ^ 2 + 1 - 3"
     case a of
         Just e -> print $ reduce (e, [])
         Nothing -> print "Nothing"

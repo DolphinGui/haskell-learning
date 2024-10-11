@@ -121,12 +121,22 @@ eval (expr, ct) =  case expr of
     Subexpression sub -> reduce (sub, ct)
     _ -> Nothing
 
+assign :: Varname -> Double -> Context -> Context
+assign v d ct =(v, d) : case lookup v ct of
+    Nothing ->  ct
+    Just old -> filter (== (v, old)) ct
+
 getOp :: Operator -> Context -> Expression -> Expression -> Maybe (Expression, Context)
-getOp op ct = \lhs rhs -> case eval (lhs, ct) of
-    Just (l, ct1) -> case eval (rhs, ct1) of
-        Just (r, ct2) -> Just (Number $ getOp' op l r, ct2)
-        Nothing -> Nothing
-    Nothing -> Nothing
+getOp op ct = \lhs rhs -> case op of
+    Assign -> case lhs of
+        Variable v -> do
+            (r, ct1) <- eval (rhs, ct)
+            Just (Number r, assign v r ct1)
+        _ -> Nothing
+    _ -> do
+        (l, ct1) <- eval (lhs, ct)
+        (r, ct2) <- eval (rhs, ct1)
+        Just (Number $ getOp' op l r, ct2)
     where
         getOp' :: Operator -> Double -> Double -> Double
         getOp' Add = (+)
@@ -160,7 +170,7 @@ reduce' o (lhs: (mid : (rhs : es)), ct)
     | otherwise = concatCt lhs $ reduce' o (mid : rhs : es, ct)
 
 reduce :: ([Expression], Context) -> Maybe (Double, Context)
-reduce iii = case reduce' Exp iii >>= reduce' Mult >>= reduce' Div >>= reduce' Add >>= reduce' Sub
+reduce iii = case reduce' Exp iii >>= reduce' Mult >>= reduce' Div >>= reduce' Add >>= reduce' Sub >>= reduce' Assign
     of
     Just (expFinal, ctFinal) -> case expFinal of
         [fin] -> eval (fin, ctFinal)
@@ -177,7 +187,7 @@ printmany = mapM putStrLn
 main :: IO ()
 main = do
     putStrLn "Hello, Haskell!"
-    let a = parse $ tokenize "(2 - 3) / 2"
+    let a = parse $ tokenize "x = (y = 3) / y"
     case a of
         Just e -> print $ reduce (e, [])
         Nothing -> print "Nothing"
